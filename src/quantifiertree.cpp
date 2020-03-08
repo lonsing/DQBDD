@@ -50,14 +50,14 @@ void QuantifierTreeNode::pushUnivVar(Variable var) {
 /*******************************************/
 /*******************************************/ 
 
-QuantifierTree::QuantifierTree(bool isConj, std::list<QuantifierTreeNode*> children, QuantifiedVariablesManager &qvMgr) : QuantifierTreeNode(qvMgr), QuantifiedVariablesManipulator(qvMgr), isConj(isConj) {
+QuantifierTree::QuantifierTree(bool isConj, std::list<QuantifierTreeNode*> children, QuantifiedVariablesManager &qvMgr) : QuantifierTreeNode(qvMgr), isConj(isConj) {
     supportSet = {};
     for (QuantifierTreeNode *child : children) {
         addChild(child);
     }
 }
 
-QuantifierTree::QuantifierTree(bool isConj, std::list<QuantifierTreeNode*> children, QuantifiedVariablesManipulator &qvManipulator) : QuantifierTreeNode(*qvManipulator.getManager()), QuantifiedVariablesManipulator(qvManipulator), isConj(isConj) {
+QuantifierTree::QuantifierTree(bool isConj, std::list<QuantifierTreeNode*> children, QuantifiedVariablesManipulator &qvManipulator) : QuantifierTreeNode(*qvManipulator.getManager()), isConj(isConj) {
     supportSet = {};
     for (QuantifierTreeNode *child : children) {
         addChild(child);
@@ -256,7 +256,7 @@ void QuantifierTree::localise() {
     }
 }
 
-QuantifierTreeFormula* QuantifierTree::changeToFormula(Cudd &mgr) {
+Formula* QuantifierTree::changeToFormula(Cudd &mgr) {
     auto childIter = children.begin();
     BDD matrix;
     if (isConj) {
@@ -265,7 +265,7 @@ QuantifierTreeFormula* QuantifierTree::changeToFormula(Cudd &mgr) {
         matrix = mgr.bddZero();
     }
     while (childIter != children.end()) {
-        QuantifierTreeFormula *childFormula = (*childIter)->changeToFormula(mgr);
+        Formula *childFormula = (*childIter)->changeToFormula(mgr);
 
         // remove the child 
         auto childToRemoveIter = childIter;
@@ -291,6 +291,7 @@ QuantifierTreeFormula* QuantifierTree::changeToFormula(Cudd &mgr) {
             }
         }
 
+        // TODO move also univ vars, if we change the algorithm
         // move all exist vars up (univ vars are not moved, because they were eliminated)
         for (const Variable &eVar : childFormula->getExistVars()) {
             addExistVar(eVar);
@@ -310,7 +311,7 @@ QuantifierTreeFormula* QuantifierTree::changeToFormula(Cudd &mgr) {
         children.erase(childToRemoveIter);
     }
 
-    QuantifierTreeFormula* f = new QuantifierTreeFormula(mgr, *qvMgr);
+    Formula* f = new Formula(mgr, *qvMgr);
     f->setMatrix(matrix);
     for (const Variable &uVar : getUnivVars()) {
         f->addUnivVar(uVar);
@@ -361,10 +362,50 @@ std::ostream& QuantifierTree::print(std::ostream& out) const {
 
 /*********************************************************/
 /*********************************************************/
+/************     QUANTIFIERTREEVARIABLE     **************/
+/*********************************************************/
+/*********************************************************/
+
+QuantifierTreeVariable::QuantifierTreeVariable(Variable var, bool isNegated, QuantifiedVariablesManager &qvmgr) 
+                            : QuantifierTreeNode(qvmgr), var(var), isNegated(isNegated)
+{
+    supportSet.insert(var);
+}
+
+
+void QuantifierTreeVariable::localise() {
+}
+
+Formula* QuantifierTreeVariable::changeToFormula(Cudd &mgr) {
+    BDD matrix;
+    if (getExistVars().contains(var)) {
+        matrix = mgr.bddOne;
+    } else if (getUnivVars().contains(var)) {
+        matrix = mgr.bddZero;
+    } else {
+        if (isNegated) {
+            matrix = !var;
+        } else {
+            matrix = var;
+        }
+    }
+
+    Formula* f = new Formula(mgr, *qvMgr);
+    f->setMatrix(matrix);
+    delete this;
+    return f;
+}
+void QuantifierTreeVariable::negate() {
+    isNegated = !isNegated;
+}
+
+/*********************************************************/
+/*********************************************************/
 /************     QUANTIFIERTREEFORMULA     **************/
 /*********************************************************/
 /*********************************************************/
 
+/*
 QuantifierTreeFormula::QuantifierTreeFormula(const Cudd &mgr, QuantifiedVariablesManager &qvmgr)
                             : QuantifierTreeNode(qvmgr), QuantifiedVariablesManipulator(qvmgr), Formula(mgr, qvmgr) {}
 
@@ -382,3 +423,4 @@ QuantifierTreeFormula* QuantifierTreeFormula::changeToFormula(Cudd &mgr) {
 void QuantifierTreeFormula::negate() {
     setMatrix(!getMatrix());
 }
+*/

@@ -27,25 +27,39 @@
 
 class QuantifierTreeFormula;
 
-class QuantifierTreeNode : virtual public QuantifiedVariablesManipulator {
+class QuantifierTreeNode : public QuantifiedVariablesManipulator {// virtual public QuantifiedVariablesManipulator {
 public:
     QuantifierTreeNode(QuantifiedVariablesManager &qvmgr);
     virtual ~QuantifierTreeNode() = default;
     virtual void localise() = 0; // TODO ake parametre a return???
     void pushExistVar(Variable var);
     void pushUnivVar(Variable var);
-    virtual QuantifierTreeFormula* changeToFormula(Cudd &mgr) = 0;
+    /**
+     * @brief Changes this instance of QuantifierTreeNode to Formula 
+     * (this QuantifierTreeNode needs to delete itself)
+     * 
+     * @param mgr 
+     * @return pointer to resulting Formula, has to be deleted
+     */
+    virtual Formula* changeToFormula(Cudd &mgr) = 0;
     virtual void negate() = 0;
     //virtual void renameVar(Variable oldVar, Variable newVar) = 0;
 };
 
-/*
-class QuantifierTreeVariable : public QuantifierTreeNode, public Variable {
-public:
-    QuantifierTreeVariable();
-};
-*/
 
+class QuantifierTreeVariable : public QuantifierTreeNode {
+    Variable var;
+    bool isNegated;
+public:
+    QuantifierTreeVariable(Variable var, bool isNegated, QuantifiedVariablesManager &qvmgr);
+    ~QuantifierTreeVariable();
+
+    void localise();
+    Formula* changeToFormula(Cudd &mgr);
+    void negate();
+};
+
+/*
 class QuantifierTreeFormula : public QuantifierTreeNode, public Formula {
 public:
     QuantifierTreeFormula(const Cudd &mgr, QuantifiedVariablesManager &qvmgr);
@@ -54,6 +68,7 @@ public:
     QuantifierTreeFormula* changeToFormula(Cudd &mgr);
     void negate();
 };
+*/
 
 class QuantifierTree : public QuantifierTreeNode {
 private:
@@ -84,7 +99,7 @@ public:
      * @param mgr The Cudd manager used for creating matrix of Formula
      * @return Pointer to the resulting instance of Formula, needs to be deleted after it was used
      */
-    QuantifierTreeFormula* changeToFormula(Cudd &mgr);
+    Formula* changeToFormula(Cudd &mgr);
     void negate();
     //void renameVar(Variable oldVar, Variable newVar);
 

@@ -92,15 +92,9 @@ public:
         if (formula.isGateOutput(var)) {
             result = gateToTree(mgr, *outputvarToGate[var], qvm);
         } else {
-            QuantifierTreeFormula *varFormula = new QuantifierTreeFormula(mgr, qvm);
-            varFormula->setMatrix(Variable(var, mgr));
-            result = varFormula;
+            QuantifierTreeVariable *qtVar = new QuantifierTreeVariable(Variable(var, mgr), hqspre::isNegative(lit), qvm);
+            return qtVar;
         }
-
-        if (hqspre::isNegative(lit)) {
-            result->negate();
-        }
-        return result;
     }
 
     QuantifierTreeNode* gateToTree(Cudd &mgr, const hqspre::Gate &g, QuantifiedVariablesManager &qvm) {
